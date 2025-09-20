@@ -2,6 +2,17 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent as ConfirmContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,10 +26,12 @@ interface OrderDetailsModalProps {
   onClose: () => void
   onPrint: () => void
   onStatusChange?: (orderId: string, newStatus: Order["status"]) => void
+  onDelete?: (orderId: string) => Promise<void> | void
 }
 
-export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange }: OrderDetailsModalProps) {
+export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange, onDelete }: OrderDetailsModalProps) {
   const [currentStatus, setCurrentStatus] = useState<Order["status"]>(order.status)
+  const [deleting, setDeleting] = useState(false)
 
   const getProductsList = (products: Order["products"], productDetails: Order["productDetails"]) => {
     const productNames = {
@@ -90,6 +103,42 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                   <Printer className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Εκτύπωση</span>
                 </Button>
+                {onDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={deleting}>
+                        {deleting ? "Διαγραφή..." : "Διαγραφή"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <ConfirmContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Επιβεβαίωση Διαγραφής</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Είστε σίγουροι ότι θέλετε να διαγράψετε αυτήν την παραγγελία; Η ενέργεια δεν μπορεί να αναιρεθεί.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Ακύρωση</AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={deleting}
+                          onClick={async (e) => {
+                            e.preventDefault()
+                            if (!onDelete) return
+                            try {
+                              setDeleting(true)
+                              await onDelete(order.id)
+                            } finally {
+                              setDeleting(false)
+                            }
+                          }}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Επιβεβαίωση
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </ConfirmContent>
+                  </AlertDialog>
+                )}
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="h-4 w-4" />
                 </Button>

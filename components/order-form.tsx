@@ -14,7 +14,8 @@ import { Plus, Trash2 } from "lucide-react"
 interface ProductItem {
   id: string
   type: string
-  quantity: number
+  // quantity stored as string so it can be blank in the UI; parse when needed
+  quantity: string
 }
 
 interface OrderData {
@@ -71,7 +72,7 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
   })
 
   const handleProductChange = (product: keyof OrderData["products"], checked: boolean) => {
-    setOrderData((prev) => ({
+    setOrderData((prev: OrderData) => ({
       ...prev,
       products: {
         ...prev.products,
@@ -88,9 +89,9 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
     const newItem: ProductItem = {
       id: Date.now().toString(),
       type: "",
-      quantity: 1,
+      quantity: "", // start empty instead of 1
     }
-    setOrderData((prev) => ({
+    setOrderData((prev: OrderData) => ({
       ...prev,
       productDetails: {
         ...prev.productDetails,
@@ -100,11 +101,11 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
   }
 
   const removeProductItem = (category: keyof OrderData["productDetails"], itemId: string) => {
-    setOrderData((prev) => ({
+    setOrderData((prev: OrderData) => ({
       ...prev,
       productDetails: {
         ...prev.productDetails,
-        [category]: prev.productDetails[category].filter((item) => item.id !== itemId),
+        [category]: prev.productDetails[category].filter((item: ProductItem) => item.id !== itemId),
       },
     }))
   }
@@ -113,13 +114,13 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
     category: keyof OrderData["productDetails"],
     itemId: string,
     field: "type" | "quantity",
-    value: string | number,
+    value: string,
   ) => {
-    setOrderData((prev) => ({
+    setOrderData((prev: OrderData) => ({
       ...prev,
       productDetails: {
         ...prev.productDetails,
-        [category]: prev.productDetails[category].map((item) =>
+        [category]: prev.productDetails[category].map((item: ProductItem) =>
           item.id === itemId ? { ...item, [field]: value } : item,
         ),
       },
@@ -127,7 +128,10 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
   }
 
   const getTotalCookies = () => {
-    return orderData.productDetails.cookies.reduce((total, item) => total + item.quantity, 0)
+    return orderData.productDetails.cookies.reduce((total: number, item: ProductItem) => {
+      const q = parseInt(item.quantity, 10)
+      return total + (Number.isNaN(q) ? 0 : q)
+    }, 0)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -282,18 +286,21 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
                             className="flex-1"
                           />
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             placeholder="Ποσότητα"
-                            min="1"
                             value={item.quantity}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const raw = e.target.value
+                              // Allow blank, otherwise digits only
+                              const cleaned = raw.replace(/\D/g, "")
                               updateProductItem(
                                 key as keyof OrderData["productDetails"],
                                 item.id,
                                 "quantity",
-                                Number.parseInt(e.target.value) || 1,
+                                cleaned,
                               )
-                            }
+                            }}
                             className="w-24"
                           />
                           <Button

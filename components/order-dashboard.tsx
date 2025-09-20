@@ -187,6 +187,13 @@ export function OrderDashboard() {
     if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, status: newStatus } : s)
   }
 
+  const handleDeleteOrder = async (orderId: string) => {
+    const { error } = await supabase.from('orders').delete().eq('id', orderId)
+    if (error) { alert('Σφάλμα διαγραφής: ' + error.message); return }
+    setOrders(prev => prev.filter(o => o.id !== orderId))
+    setSelectedOrder(null)
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -294,6 +301,7 @@ export function OrderDashboard() {
           onClose={() => setSelectedOrder(null)}
           onPrint={() => handlePrintOrder(selectedOrder)}
           onStatusChange={handleStatusChange}
+          onDelete={handleDeleteOrder}
         />
       )}
     </div>
