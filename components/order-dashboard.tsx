@@ -24,7 +24,9 @@ export interface Order {
   productDetails: { cookies: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
   createdAt: Date
-  status: "pending" | "completed" | "cancelled"
+  // New status flow
+  // pending -> proforma_sent -> payment -> shipped (or shipped_unpaid)
+  status: "pending" | "proforma_sent" | "payment" | "shipped" | "shipped_unpaid"
 }
 
 // Map DB row -> Order interface
@@ -54,7 +56,15 @@ function mapRow(row: any): Order {
     },
     discount: row.discount || 'none',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
-    status: row.status || 'pending',
+    // Fallback mapping for legacy statuses
+    // 'completed' -> 'shipped'; 'cancelled' -> keep 'pending' (or could map to a removed state)
+    status: ((): Order['status'] => {
+      const raw = row.status
+      if (!raw) return 'pending'
+      if (['pending','proforma_sent','payment','shipped','shipped_unpaid'].includes(raw)) return raw
+      if (raw === 'completed') return 'shipped'
+      return 'pending'
+    })(),
   }
 }
 
@@ -110,15 +120,19 @@ export function OrderDashboard() {
   const getTotalCookies = (pd: Order['productDetails']) => pd.cookies.reduce((t,i)=>t+i.quantity,0)
 
   const getStatusColor = (status: Order['status']) => ({
-    completed: 'bg-green-100 text-green-800 border-green-200',
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    cancelled: 'bg-red-100 text-red-800 border-red-200',
+    proforma_sent: 'bg-blue-100 text-blue-800 border-blue-200',
+    payment: 'bg-purple-100 text-purple-800 border-purple-200',
+    shipped: 'bg-green-100 text-green-800 border-green-200',
+    shipped_unpaid: 'bg-red-100 text-red-800 border-red-200',
   }[status] || 'bg-gray-100 text-gray-800 border-gray-200')
 
   const getStatusText = (status: Order['status']) => ({
-    completed: 'Ολοκληρωμένη',
     pending: 'Εκκρεμής',
-    cancelled: 'Ακυρωμένη',
+    proforma_sent: 'Αποστ. Προτιμολογίου',
+    payment: 'Πληρωμή',
+    shipped: 'Αποστολή',
+    shipped_unpaid: 'Αποστολή χωρίς εξόφληση',
   }[status] || status)
 
   const handlePrintOrder = (order: Order) => {
@@ -164,7 +178,8 @@ export function OrderDashboard() {
       customer_name: orderData.customerName || null,
       phone: orderData.phone || null,
       order_for: orderData.orderFor || null,
-      status: 'pending',
+  // initial status always 'pending' in new flow
+  status: 'pending',
       discount: orderData.discount || 'none',
       has_cookies: products.cookies,
       has_figures: products.figures,
@@ -219,9 +234,11 @@ export function OrderDashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
-              <SelectItem value="pending">Εκκρεμείς</SelectItem>
-              <SelectItem value="completed">Ολοκληρωμένες</SelectItem>
-              <SelectItem value="cancelled">Ακυρωμένες</SelectItem>
+              <SelectItem value="pending">Εκκρεμής</SelectItem>
+              <SelectItem value="proforma_sent">Αποστ. Προτιμολογίου</SelectItem>
+              <SelectItem value="payment">Πληρωμή</SelectItem>
+              <SelectItem value="shipped">Αποστολή</SelectItem>
+              <SelectItem value="shipped_unpaid">Αποστολή χωρίς εξόφληση</SelectItem>
             </SelectContent>
           </Select>
         </div>

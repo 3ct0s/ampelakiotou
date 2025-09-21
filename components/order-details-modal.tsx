@@ -61,11 +61,15 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
 
   const getStatusColor = (status: Order["status"]) => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200"
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "cancelled":
+      case "proforma_sent":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "payment":
+        return "bg-purple-100 text-purple-800 border-purple-200"
+      case "shipped":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "shipped_unpaid":
         return "bg-red-100 text-red-800 border-red-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
@@ -74,12 +78,16 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
 
   const getStatusText = (status: Order["status"]) => {
     switch (status) {
-      case "completed":
-        return "Ολοκληρωμένη"
       case "pending":
         return "Εκκρεμής"
-      case "cancelled":
-        return "Ακυρωμένη"
+      case "proforma_sent":
+        return "Αποστ. Προτιμολογίου"
+      case "payment":
+        return "Πληρωμή"
+      case "shipped":
+        return "Αποστολή"
+      case "shipped_unpaid":
+        return "Αποστολή χωρίς εξόφληση"
       default:
         return status
     }
@@ -170,8 +178,10 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Εκκρεμής</SelectItem>
-                      <SelectItem value="completed">Ολοκληρωμένη</SelectItem>
-                      <SelectItem value="cancelled">Ακυρωμένη</SelectItem>
+                      <SelectItem value="proforma_sent">Αποστ. Προτιμολογίου</SelectItem>
+                      <SelectItem value="payment">Πληρωμή</SelectItem>
+                      <SelectItem value="shipped">Αποστολή</SelectItem>
+                      <SelectItem value="shipped_unpaid">Αποστολή χωρίς εξόφληση</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
