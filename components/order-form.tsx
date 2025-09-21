@@ -2,9 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,9 @@ interface OrderData {
   customerName: string
   phone: string
   orderFor: string // Added order for date field
+  remarks?: string // Optional remarks
+  communicationMethod?: string
+  communicationValue?: string
   products: {
     cookies: boolean
     figures: boolean
@@ -43,10 +47,27 @@ interface OrderData {
 }
 
 interface OrderFormProps {
-  onSubmit?: (orderData: OrderData) => void
+  onSubmit?: (orderData: OrderData, orderId?: string) => void
+  /** When mode = 'edit', we pre-fill the form and call onSubmit with the existing order id */
+  mode?: 'create' | 'edit'
+  /** Minimal initial data coming from an existing order. Quantity may be number or string */
+  initialData?: {
+    id?: string
+    afm?: string
+    customerName?: string
+    phone?: string
+    orderFor?: string | null
+    remarks?: string | null
+    communicationMethod?: string | null
+    communicationValue?: string | null
+    discount?: string
+    products?: Partial<OrderData['products']>
+    productDetails?: Partial<{ [K in keyof OrderData['productDetails']]: Array<{ id: string; type: string; quantity: string | number }> }>
+  }
+  onCancel?: () => void
 }
 
-export function OrderForm({ onSubmit }: OrderFormProps) {
+export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: OrderFormProps) {
   const [orderData, setOrderData] = useState<OrderData>({
     afm: "",
     customerName: "",
@@ -69,7 +90,43 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
       other: [], // Initialize other category details
     },
     discount: "none",
+    remarks: "",
+    communicationMethod: "",
+    communicationValue: "",
   })
+
+  // Hydrate state when editing
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      setOrderData(prev => ({
+        ...prev,
+        afm: initialData.afm || "",
+        customerName: initialData.customerName || "",
+        phone: initialData.phone || "",
+        orderFor: initialData.orderFor || "",
+        remarks: initialData.remarks || "",
+        communicationMethod: initialData.communicationMethod || "",
+        communicationValue: initialData.communicationValue || "",
+        discount: initialData.discount || initialData.discount === 'none' ? (initialData.discount as string) : (prev.discount || 'none'),
+        products: {
+          cookies: initialData.products?.cookies ?? false,
+            figures: initialData.products?.figures ?? false,
+            sets: initialData.products?.sets ?? false,
+            toppers: initialData.products?.toppers ?? false,
+            prints: initialData.products?.prints ?? false,
+            other: initialData.products?.other ?? false,
+        },
+        productDetails: {
+          cookies: (initialData.productDetails?.cookies || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          figures: (initialData.productDetails?.figures || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          sets: (initialData.productDetails?.sets || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          toppers: (initialData.productDetails?.toppers || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          prints: (initialData.productDetails?.prints || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          other: (initialData.productDetails?.other || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+        }
+      }))
+    }
+  }, [mode, initialData])
 
   const handleProductChange = (product: keyof OrderData["products"], checked: boolean) => {
     setOrderData((prev: OrderData) => ({
@@ -136,42 +193,45 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Παραγγελία:", orderData)
-
     if (onSubmit) {
-      onSubmit(orderData)
-      setOrderData({
-        afm: "",
-        customerName: "",
-        phone: "",
-        orderFor: "", // Reset order for date
-        products: {
-          cookies: false,
-          figures: false,
-          sets: false,
-          toppers: false,
-          prints: false,
-          other: false, // Reset other category
-        },
-        productDetails: {
-          cookies: [],
-          figures: [],
-          sets: [],
-          toppers: [],
-          prints: [],
-          other: [], // Reset other category details
-        },
-        discount: "none",
-      })
-    } else {
-      alert("Η παραγγελία καταχωρήθηκε επιτυχώς!")
+      onSubmit(orderData, initialData?.id)
+      if (mode === 'create') {
+        setOrderData({
+          afm: "",
+          customerName: "",
+          phone: "",
+          orderFor: "", // Reset order for date
+          products: {
+            cookies: false,
+            figures: false,
+            sets: false,
+            toppers: false,
+            prints: false,
+            other: false, // Reset other category
+          },
+          productDetails: {
+            cookies: [],
+            figures: [],
+            sets: [],
+            toppers: [],
+            prints: [],
+            other: [], // Reset other category details
+          },
+            discount: "none",
+            remarks: "",
+            communicationMethod: "",
+            communicationValue: "",
+        })
+      }
     }
   }
 
   return (
     <Card className="w-full shadow-lg border-border/50">
       <CardHeader className="text-center pb-6">
-        <h1 className="text-2xl font-bold text-foreground">Καταχώρηση Παραγγελίας</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          {mode === 'edit' ? 'Επεξεργασία Παραγγελίας' : 'Καταχώρηση Παραγγελίας'}
+        </h1>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -234,6 +294,44 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
                   type="date"
                   value={orderData.orderFor}
                   onChange={(e) => setOrderData((prev) => ({ ...prev, orderFor: e.target.value }))}
+                  className="bg-input border-border focus:ring-ring"
+                />
+              </div>
+            </div>
+
+            {/* Τέλος στοιχείων πελάτη */}
+          </div>
+
+          {/* Επικοινωνία */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Επικοινωνία</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2 md:col-span-1">
+                <Label htmlFor="communicationMethod" className="text-sm font-medium">Τρόπος Επικοινωνίας</Label>
+                <Select
+                  value={orderData.communicationMethod || ""}
+                  onValueChange={(value) => setOrderData(prev => ({ ...prev, communicationMethod: value }))}
+                >
+                  <SelectTrigger id="communicationMethod" className="bg-input border-border">
+                    <SelectValue placeholder="Επιλέξτε" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="phone">Τηλέφωνο</SelectItem>
+                    <SelectItem value="viber">Viber</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="communicationValue" className="text-sm font-medium">Στοιχείο Επικοινωνίας</Label>
+                <Input
+                  id="communicationValue"
+                  type="text"
+                  placeholder="Email, username, αριθμός κ.λπ. (προαιρετικό)"
+                  value={orderData.communicationValue || ""}
+                  onChange={(e) => setOrderData(prev => ({ ...prev, communicationValue: e.target.value }))}
                   className="bg-input border-border focus:ring-ring"
                 />
               </div>
@@ -337,6 +435,21 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
             )}
           </div>
 
+          {/* Παρατηρήσεις */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Πρόσθετες Παρατηρήσεις (προαιρετικό)</h2>
+            <div className="space-y-2">
+              <Label htmlFor="remarks" className="text-sm font-medium">Παρατηρήσεις</Label>
+              <Textarea
+                id="remarks"
+                placeholder="Προσθέστε τυχόν σχόλια, διευκρινίσεις ή ειδικές οδηγίες..."
+                value={orderData.remarks || ""}
+                onChange={(e) => setOrderData(prev => ({ ...prev, remarks: e.target.value }))}
+                className="bg-input border-border focus:ring-ring min-h-32 placeholder:text-base"
+              />
+            </div>
+          </div>
+
           {/* Έκπτωση */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Έκπτωση</h2>
@@ -364,12 +477,24 @@ export function OrderForm({ onSubmit }: OrderFormProps) {
 
           {/* Κουμπί Υποβολής */}
           <div className="pt-4">
-            <Button
-              type="submit"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3"
-            >
-              Καταχώρηση Παραγγελίας
-            </Button>
+            <div className="flex gap-3">
+              {onCancel && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/3"
+                  onClick={onCancel}
+                >
+                  Άκυρο
+                </Button>
+              )}
+              <Button
+                type="submit"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3"
+              >
+                {mode === 'edit' ? 'Αποθήκευση Αλλαγών' : 'Καταχώρηση Παραγγελίας'}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>

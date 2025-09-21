@@ -16,10 +16,14 @@ import { Search, Plus, Filter, Printer } from "lucide-react"
 interface ProductItem { id: string; type: string; quantity: number }
 export interface Order {
   id: string
+  orderNumber?: number // Human-friendly incremental number
   afm: string
   customerName: string
   phone: string
   orderFor?: string
+  remarks?: string
+  communicationMethod?: string
+  communicationValue?: string
   products: { cookies: boolean; figures: boolean; sets: boolean; toppers: boolean; prints: boolean; other: boolean }
   productDetails: { cookies: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
@@ -32,8 +36,16 @@ export interface Order {
 // Map DB row -> Order interface
 function mapRow(row: any): Order {
   const pd = row.product_details || {}
+  const normalize = (arr: any[]): ProductItem[] => Array.isArray(arr)
+    ? arr.map(it => ({
+        id: String(it.id || Date.now() + Math.random()),
+        type: String(it.type || ''),
+        quantity: Number(it.quantity) || 0,
+      }))
+    : []
   return {
     id: row.id,
+    orderNumber: row.order_number ?? undefined,
     afm: row.afm || "",
     customerName: row.customer_name || "",
     phone: row.phone || "",
@@ -47,15 +59,18 @@ function mapRow(row: any): Order {
       other: !!row.has_other,
     },
     productDetails: {
-      cookies: pd.cookies || [],
-      figures: pd.figures || [],
-      sets: pd.sets || [],
-      toppers: pd.toppers || [],
-      prints: pd.prints || [],
-      other: pd.other || [],
+      cookies: normalize(pd.cookies || []),
+      figures: normalize(pd.figures || []),
+      sets: normalize(pd.sets || []),
+      toppers: normalize(pd.toppers || []),
+      prints: normalize(pd.prints || []),
+      other: normalize(pd.other || []),
     },
     discount: row.discount || 'none',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    remarks: row.remarks || undefined,
+    communicationMethod: row.communication_method || undefined,
+    communicationValue: row.communication_value || undefined,
     // Fallback mapping for legacy statuses
     // 'completed' -> 'shipped'; 'cancelled' -> keep 'pending' (or could map to a removed state)
     status: ((): Order['status'] => {
@@ -76,6 +91,8 @@ export function OrderDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showNewOrderForm, setShowNewOrderForm] = useState(false)
+  // Holds the order currently being edited (opens edit dialog when not null)
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -111,13 +128,12 @@ export function OrderDashboard() {
       .filter(([, selected]) => selected)
       .map(([key]) => {
         const items = productDetails[key as keyof typeof productDetails]
-        const total = items.reduce((s, i) => s + i.quantity, 0)
+        const total = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)
         return `${productNames[key]} (${total})`
       })
       .join(', ')
   }
-
-  const getTotalCookies = (pd: Order['productDetails']) => pd.cookies.reduce((t,i)=>t+i.quantity,0)
+  const getTotalCookies = (pd: Order['productDetails']) => pd.cookies.reduce((t,i)=> t + (Number(i.quantity) || 0), 0)
 
   const getStatusColor = (status: Order['status']) => ({
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -146,15 +162,18 @@ export function OrderDashboard() {
       }).join('')
     }
     const totalCookies = getTotalCookies(order.productDetails)
+    const humanId = order.orderNumber ?? order.id
     const printContent = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h1 style="text-align: center; color: #d47f98;">Παραγγελία #${order.id}</h1>
+        <h1 style="text-align: center; color: #d47f98;">Παραγγελία #${humanId}</h1>
         <hr style="margin: 20px 0;">
         <h2>Στοιχεία Πελάτη:</h2>
         <p><strong>Όνομα:</strong> ${order.customerName}</p>
         <p><strong>ΑΦΜ:</strong> ${order.afm}</p>
         <p><strong>Τηλέφωνο:</strong> ${order.phone}</p>
         ${order.orderFor ? `<p><strong>Ημερομηνία Παράδοσης:</strong> ${new Date(order.orderFor).toLocaleDateString('el-GR')}</p>` : ''}
+        ${order.remarks ? `<p><strong>Παρατηρήσεις:</strong> ${order.remarks}</p>` : ''}
+        ${(order.communicationMethod && order.communicationValue) ? `<p><strong>Επικοινωνία:</strong> ${order.communicationMethod} - ${order.communicationValue}</p>` : ''}
         <h2>Προϊόντα:</h2>
         ${getDetailedProductsList()}
         ${totalCookies > 0 ? `<h2>Συνολικά Μπισκότα:</h2><p style="font-size: 18px; font-weight: bold; color: #d47f98;">${totalCookies} τεμάχια</p>` : ''}
@@ -171,7 +190,19 @@ export function OrderDashboard() {
   }
 
   const addNewOrder = async (orderData: any) => {
-    const productDetails = orderData.productDetails
+    // Normalize productDetails quantities to numbers before persisting
+    const normalizePD = (pd: any) => {
+      const out: any = {}
+      Object.keys(pd).forEach(k => {
+        out[k] = (pd[k] || []).map((it: any) => ({
+          id: it.id,
+          type: it.type,
+          quantity: Number(it.quantity) || 0,
+        }))
+      })
+      return out
+    }
+    const productDetails = normalizePD(orderData.productDetails)
     const products = orderData.products
     const insertPayload = {
       afm: orderData.afm || null,
@@ -188,6 +219,9 @@ export function OrderDashboard() {
       has_prints: products.prints,
       has_other: products.other,
       product_details: productDetails,
+      remarks: orderData.remarks || null,
+      communication_method: orderData.communicationMethod || null,
+      communication_value: orderData.communicationValue || null,
     }
     const { data, error } = await supabase.from('orders').insert(insertPayload).select('*').single()
     if (error) { alert('Σφάλμα καταχώρησης: ' + error.message); return }
@@ -200,6 +234,48 @@ export function OrderDashboard() {
     if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
     if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, status: newStatus } : s)
+  }
+
+  // Update existing order (called from OrderForm in edit mode)
+  const handleUpdateOrder = async (updated: any, orderId?: string) => {
+    if (!orderId) return
+    const normalizePD = (pd: any) => {
+      const out: any = {}
+      Object.keys(pd).forEach(k => {
+        out[k] = (pd[k] || []).map((it: any) => ({
+          id: it.id,
+          type: it.type,
+          quantity: Number(it.quantity) || 0,
+        }))
+      })
+      return out
+    }
+    const productDetails = normalizePD(updated.productDetails)
+    const products = updated.products
+    const updatePayload = {
+      afm: updated.afm || null,
+      customer_name: updated.customerName || null,
+      phone: updated.phone || null,
+      order_for: updated.orderFor || null,
+      discount: updated.discount || 'none',
+      has_cookies: products.cookies,
+      has_figures: products.figures,
+      has_sets: products.sets,
+      has_toppers: products.toppers,
+      has_prints: products.prints,
+      has_other: products.other,
+      product_details: productDetails,
+      remarks: updated.remarks || null,
+      communication_method: updated.communicationMethod || null,
+      communication_value: updated.communicationValue || null,
+    }
+    const { data, error } = await supabase.from('orders').update(updatePayload).eq('id', orderId).select('*').single()
+    if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
+    const mapped = mapRow(data)
+    setOrders(prev => prev.map(o => o.id === orderId ? mapped : o))
+    setEditingOrder(null)
+    // If the order details modal is currently open for this order, update it too
+    setSelectedOrder(prev => prev && prev.id === orderId ? mapped : prev)
   }
 
   const handleDeleteOrder = async (orderId: string) => {
@@ -254,6 +330,31 @@ export function OrderDashboard() {
             <OrderForm onSubmit={addNewOrder} />
           </DialogContent>
         </Dialog>
+        {editingOrder && (
+          <Dialog open={!!editingOrder} onOpenChange={(open) => { if (!open) setEditingOrder(null) }}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Επεξεργασία Παραγγελίας #{editingOrder.orderNumber ?? editingOrder.id}</DialogTitle></DialogHeader>
+              <OrderForm
+                mode="edit"
+                initialData={{
+                  id: editingOrder.id,
+                  afm: editingOrder.afm,
+                  customerName: editingOrder.customerName,
+                  phone: editingOrder.phone,
+                  orderFor: editingOrder.orderFor || undefined,
+                  remarks: editingOrder.remarks || undefined,
+                  communicationMethod: editingOrder.communicationMethod || undefined,
+                  communicationValue: editingOrder.communicationValue || undefined,
+                  discount: editingOrder.discount,
+                  products: editingOrder.products,
+                  productDetails: editingOrder.productDetails,
+                }}
+                onSubmit={handleUpdateOrder}
+                onCancel={() => setEditingOrder(null)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* State handling */}
@@ -272,7 +373,7 @@ export function OrderDashboard() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1" onClick={() => setSelectedOrder(order)}>
                       <div className="flex items-center gap-4 mb-2">
-                        <h3 className="font-semibold text-lg">#{order.id}</h3>
+                        <h3 className="font-semibold text-lg">#{order.orderNumber ?? order.id}</h3>
                         <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -300,9 +401,14 @@ export function OrderDashboard() {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={(e)=>{e.stopPropagation(); handlePrintOrder(order)}} className="ml-4">
-                      <Printer className="h-4 w-4" />
-                    </Button>
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button variant="outline" size="sm" onClick={(e)=>{e.stopPropagation(); handlePrintOrder(order)}}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={(e)=>{e.stopPropagation(); setEditingOrder(order)}}>
+                        Επεξ.
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -319,6 +425,7 @@ export function OrderDashboard() {
           onPrint={() => handlePrintOrder(selectedOrder)}
           onStatusChange={handleStatusChange}
           onDelete={handleDeleteOrder}
+          onEdit={(order) => { setSelectedOrder(null); setEditingOrder(order) }}
         />
       )}
     </div>

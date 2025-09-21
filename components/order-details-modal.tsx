@@ -27,9 +27,10 @@ interface OrderDetailsModalProps {
   onPrint: () => void
   onStatusChange?: (orderId: string, newStatus: Order["status"]) => void
   onDelete?: (orderId: string) => Promise<void> | void
+  onEdit?: (order: Order) => void
 }
 
-export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange, onDelete }: OrderDetailsModalProps) {
+export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange, onDelete, onEdit }: OrderDetailsModalProps) {
   const [currentStatus, setCurrentStatus] = useState<Order["status"]>(order.status)
   const [deleting, setDeleting] = useState(false)
 
@@ -105,7 +106,7 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
           {/* Fixed header */}
           <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-border bg-background">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl md:text-2xl">Λεπτομέρειες Παραγγελίας #{order.id}</DialogTitle>
+              <DialogTitle className="text-xl md:text-2xl">Λεπτομέρειες Παραγγελίας #{order.orderNumber ?? order.id}</DialogTitle>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={onPrint}>
                   <Printer className="h-4 w-4 mr-2" />
@@ -165,6 +166,13 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
             }}
           >
             <div className="p-4 sm:p-6 space-y-6 max-w-4xl mx-auto">
+              {onEdit && (
+                <div className="flex justify-end -mt-2">
+                  <Button variant="secondary" size="sm" onClick={() => onEdit(order)}>
+                    Επεξεργασία
+                  </Button>
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg">
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Κατάσταση Παραγγελίας</h3>
@@ -205,6 +213,12 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                     <p className="text-sm text-muted-foreground">Τηλέφωνο</p>
                     <p className="font-medium">{order.phone}</p>
                   </div>
+                  {order.communicationMethod && order.communicationValue && (
+                    <div className="sm:col-span-2">
+                      <p className="text-sm text-muted-foreground">Επικοινωνία</p>
+                      <p className="font-medium">{order.communicationMethod}: {order.communicationValue}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm text-muted-foreground">Ημερομηνία Παραγγελίας</p>
                     <p className="font-medium">{order.createdAt.toLocaleDateString("el-GR")}</p>
@@ -257,6 +271,18 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                   </div>
                 )}
               </div>
+
+              <Separator />
+
+              {/* Remarks */}
+              {order.remarks && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Παρατηρήσεις</h3>
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm whitespace-pre-line">{order.remarks}</p>
+                  </div>
+                </div>
+              )}
 
               <Separator />
 
