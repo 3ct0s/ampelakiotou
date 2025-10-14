@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OrderForm } from "./order-form"
 import { OrderDetailsModal } from "./order-details-modal"
 import { Search, Plus, Filter, Printer } from "lucide-react"
@@ -20,6 +21,7 @@ export interface Order {
   afm: string
   customerName: string
   phone: string
+  customerType: "λιανική" | "χονδρική"
   orderFor?: string
   remarks?: string
   communicationMethod?: string
@@ -28,6 +30,7 @@ export interface Order {
   productDetails: { cookies: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
   createdAt: Date
+  completed: boolean
   // New status flow
   // pending -> proforma_sent -> payment -> shipped (or shipped_unpaid)
   status: "pending" | "proforma_sent" | "payment" | "shipped" | "shipped_unpaid"
@@ -49,6 +52,7 @@ function mapRow(row: any): Order {
     afm: row.afm || "",
     customerName: row.customer_name || "",
     phone: row.phone || "",
+    customerType: row.customer_type || "λιανική",
     orderFor: row.order_for || undefined,
     products: {
       cookies: !!row.has_cookies,
@@ -71,6 +75,7 @@ function mapRow(row: any): Order {
     remarks: row.remarks || undefined,
     communicationMethod: row.communication_method || undefined,
     communicationValue: row.communication_value || undefined,
+    completed: !!row.completed,
     // Fallback mapping for legacy statuses
     // 'completed' -> 'shipped'; 'cancelled' -> keep 'pending' (or could map to a removed state)
     status: ((): Order['status'] => {
@@ -93,6 +98,7 @@ export function OrderDashboard() {
   const [showNewOrderForm, setShowNewOrderForm] = useState(false)
   // Holds the order currently being edited (opens edit dialog when not null)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
+  const [activeTab, setActiveTab] = useState("active")
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -119,7 +125,8 @@ export function OrderDashboard() {
       order.afm.includes(searchTerm) ||
       order.phone.includes(searchTerm)
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    return matchesSearch && matchesStatus
+    const matchesTab = activeTab === 'active' ? !order.completed : order.completed
+    return matchesSearch && matchesStatus && matchesTab
   })
 
   const getProductsList = (products: Order['products'], productDetails: Order['productDetails']) => {
@@ -171,6 +178,7 @@ export function OrderDashboard() {
         <p><strong>Όνομα:</strong> ${order.customerName}</p>
         <p><strong>ΑΦΜ:</strong> ${order.afm}</p>
         <p><strong>Τηλέφωνο:</strong> ${order.phone}</p>
+        <p><strong>Τύπος Πελάτη:</strong> ${order.customerType === 'λιανική' ? 'Λιανική' : 'Χονδρική'}</p>
         ${order.orderFor ? `<p><strong>Ημερομηνία Παράδοσης:</strong> ${new Date(order.orderFor).toLocaleDateString('el-GR')}</p>` : ''}
         ${order.remarks ? `<p><strong>Παρατηρήσεις:</strong> ${order.remarks}</p>` : ''}
         ${(order.communicationMethod && order.communicationValue) ? `<p><strong>Επικοινωνία:</strong> ${order.communicationMethod} - ${order.communicationValue}</p>` : ''}
@@ -208,9 +216,11 @@ export function OrderDashboard() {
       afm: orderData.afm || null,
       customer_name: orderData.customerName || null,
       phone: orderData.phone || null,
+      customer_type: orderData.customerType || 'λιανική',
       order_for: orderData.orderFor || null,
   // initial status always 'pending' in new flow
   status: 'pending',
+      completed: false,
       discount: orderData.discount || 'none',
       has_cookies: products.cookies,
       has_figures: products.figures,
@@ -236,6 +246,13 @@ export function OrderDashboard() {
     if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, status: newStatus } : s)
   }
 
+  const handleCompleteOrder = async (orderId: string, completed: boolean) => {
+    const { error } = await supabase.from('orders').update({ completed }).eq('id', orderId)
+    if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, completed } : o))
+    if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, completed } : s)
+  }
+
   // Update existing order (called from OrderForm in edit mode)
   const handleUpdateOrder = async (updated: any, orderId?: string) => {
     if (!orderId) return
@@ -256,6 +273,7 @@ export function OrderDashboard() {
       afm: updated.afm || null,
       customer_name: updated.customerName || null,
       phone: updated.phone || null,
+      customer_type: updated.customerType || 'λιανική',
       order_for: updated.orderFor || null,
       discount: updated.discount || 'none',
       has_cookies: products.cookies,
@@ -296,8 +314,16 @@ export function OrderDashboard() {
         <p className="text-muted-foreground">Διαχειριστείτε όλες τις παραγγελίες σας από ένα μέρος</p>
       </div>
 
-      {/* Controls */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="active">Ενεργές Παραγγελίες</TabsTrigger>
+          <TabsTrigger value="completed">Παλαιές Παραγγελίες</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="space-y-6">
+          {/* Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -341,6 +367,7 @@ export function OrderDashboard() {
                   afm: editingOrder.afm,
                   customerName: editingOrder.customerName,
                   phone: editingOrder.phone,
+                  customerType: editingOrder.customerType,
                   orderFor: editingOrder.orderFor || undefined,
                   remarks: editingOrder.remarks || undefined,
                   communicationMethod: editingOrder.communicationMethod || undefined,
@@ -374,13 +401,19 @@ export function OrderDashboard() {
                     <div className="flex-1" onClick={() => setSelectedOrder(order)}>
                       <div className="flex items-center gap-4 mb-2">
                         <h3 className="font-semibold text-lg">#{order.orderNumber ?? order.id}</h3>
-                        <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
+                        <div className="flex gap-2">
+                          <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
+                          {order.completed && (
+                            <Badge className="bg-gray-100 text-gray-800 border-gray-200">Ολοκληρωμένη</Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="font-medium">{order.customerName}</p>
                           <p className="text-muted-foreground">ΑΦΜ: {order.afm}</p>
                           <p className="text-muted-foreground">{order.phone}</p>
+                          <p className="text-xs text-muted-foreground">{order.customerType === 'λιανική' ? 'Λιανική' : 'Χονδρική'}</p>
                         </div>
                         <div>
                           <p className="font-medium">Προϊόντα:</p>
@@ -417,6 +450,9 @@ export function OrderDashboard() {
         </div>
       )}
 
+        </TabsContent>
+      </Tabs>
+
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
@@ -424,6 +460,7 @@ export function OrderDashboard() {
           onClose={() => setSelectedOrder(null)}
           onPrint={() => handlePrintOrder(selectedOrder)}
           onStatusChange={handleStatusChange}
+          onCompleteOrder={handleCompleteOrder}
           onDelete={handleDeleteOrder}
           onEdit={(order) => { setSelectedOrder(null); setEditingOrder(order) }}
         />

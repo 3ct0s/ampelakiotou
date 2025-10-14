@@ -23,6 +23,7 @@ interface OrderData {
   afm: string
   customerName: string
   phone: string
+  customerType: "λιανική" | "χονδρική"
   orderFor: string // Added order for date field
   remarks?: string // Optional remarks
   communicationMethod?: string
@@ -56,6 +57,7 @@ interface OrderFormProps {
     afm?: string
     customerName?: string
     phone?: string
+    customerType?: "λιανική" | "χονδρική"
     orderFor?: string | null
     remarks?: string | null
     communicationMethod?: string | null
@@ -72,6 +74,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
     afm: "",
     customerName: "",
     phone: "",
+    customerType: "λιανική",
     orderFor: "", // Initialize order for date
     products: {
       cookies: false,
@@ -103,6 +106,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
         afm: initialData.afm || "",
         customerName: initialData.customerName || "",
         phone: initialData.phone || "",
+        customerType: initialData.customerType || "λιανική",
         orderFor: initialData.orderFor || "",
         remarks: initialData.remarks || "",
         communicationMethod: initialData.communicationMethod || "",
@@ -200,6 +204,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           afm: "",
           customerName: "",
           phone: "",
+          customerType: "λιανική",
           orderFor: "", // Reset order for date
           products: {
             cookies: false,
@@ -285,6 +290,28 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="customerType" className="text-sm font-medium">
+                  Τύπος Πελάτη
+                </Label>
+                <Select 
+                  value={orderData.customerType} 
+                  onValueChange={(value: "λιανική" | "χονδρική") => 
+                    setOrderData((prev) => ({ ...prev, customerType: value }))
+                  }
+                >
+                  <SelectTrigger className="bg-input border-border focus:ring-ring">
+                    <SelectValue placeholder="Επιλέξτε τύπο πελάτη" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="λιανική">Λιανική</SelectItem>
+                    <SelectItem value="χονδρική">Χονδρική</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="orderFor" className="text-sm font-medium">
                   Ημερομηνία Παράδοσης (προαιρετικό)

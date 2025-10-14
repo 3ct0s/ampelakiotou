@@ -26,13 +26,15 @@ interface OrderDetailsModalProps {
   onClose: () => void
   onPrint: () => void
   onStatusChange?: (orderId: string, newStatus: Order["status"]) => void
+  onCompleteOrder?: (orderId: string, completed: boolean) => void
   onDelete?: (orderId: string) => Promise<void> | void
   onEdit?: (order: Order) => void
 }
 
-export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange, onDelete, onEdit }: OrderDetailsModalProps) {
+export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusChange, onCompleteOrder, onDelete, onEdit }: OrderDetailsModalProps) {
   const [currentStatus, setCurrentStatus] = useState<Order["status"]>(order.status)
   const [deleting, setDeleting] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   const getProductsList = (products: Order["products"], productDetails: Order["productDetails"]) => {
     const productNames = {
@@ -107,12 +109,13 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
           <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-border bg-background">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl md:text-2xl">Λεπτομέρειες Παραγγελίας #{order.orderNumber ?? order.id}</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={onPrint}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Εκτύπωση</span>
-                </Button>
-                {onDelete && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={onPrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Εκτύπωση</span>
+                  </Button>
+                  {onDelete && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="sm" disabled={deleting}>
@@ -148,9 +151,56 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                     </ConfirmContent>
                   </AlertDialog>
                 )}
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  <X className="h-4 w-4" />
-                </Button>
+                  <Button variant="ghost" size="sm" onClick={onClose}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {onCompleteOrder && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant={order.completed ? "secondary" : "default"}
+                        size="sm"
+                        disabled={completing}
+                        className={order.completed ? "" : "bg-green-600 hover:bg-green-700 text-white"}
+                      >
+                        {completing ? (order.completed ? "Επαναφέρεται..." : "Ολοκληρώνεται...") : (order.completed ? "Επαναφορά" : "Ολοκλήρωση")}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <ConfirmContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {order.completed ? "Επιβεβαίωση Επαναφοράς" : "Επιβεβαίωση Ολοκλήρωσης"}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {order.completed 
+                            ? "Είστε σίγουροι ότι θέλετε να επαναφέρετε αυτήν την παραγγελία στις ενεργές παραγγελίες;"
+                            : "Είστε σίγουροι ότι θέλετε να σημειώσετε αυτήν την παραγγελία ως ολοκληρωμένη; Θα μεταφερθεί στις παλαιές παραγγελίες."
+                          }
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={completing}>Ακύρωση</AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={completing}
+                          onClick={async (e) => {
+                            e.preventDefault()
+                            if (!onCompleteOrder) return
+                            try {
+                              setCompleting(true)
+                              await onCompleteOrder(order.id, !order.completed)
+                            } finally {
+                              setCompleting(false)
+                            }
+                          }}
+                          className={order.completed ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : "bg-green-600 text-white hover:bg-green-700"}
+                        >
+                          {order.completed ? "Επαναφορά" : "Ολοκλήρωση"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </ConfirmContent>
+                  </AlertDialog>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -176,7 +226,12 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg">
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Κατάσταση Παραγγελίας</h3>
-                  <Badge className={getStatusColor(currentStatus)}>{getStatusText(currentStatus)}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(currentStatus)}>{getStatusText(currentStatus)}</Badge>
+                    {order.completed && (
+                      <Badge className="bg-gray-100 text-gray-800 border-gray-200">Ολοκληρωμένη</Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium">Αλλαγή κατάστασης:</label>
@@ -212,6 +267,10 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
                   <div>
                     <p className="text-sm text-muted-foreground">Τηλέφωνο</p>
                     <p className="font-medium">{order.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Τύπος Πελάτη</p>
+                    <p className="font-medium">{order.customerType === 'λιανική' ? 'Λιανική' : 'Χονδρική'}</p>
                   </div>
                   {order.communicationMethod && order.communicationValue && (
                     <div className="sm:col-span-2">
