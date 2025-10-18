@@ -74,7 +74,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
     afm: "",
     customerName: "",
     phone: "",
-    customerType: "λιανική",
+    customerType: "χονδρική",
     orderFor: "", // Initialize order for date
     products: {
       cookies: false,
@@ -106,7 +106,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
         afm: initialData.afm || "",
         customerName: initialData.customerName || "",
         phone: initialData.phone || "",
-        customerType: initialData.customerType || "λιανική",
+        customerType: initialData.customerType || "χονδρική",
         orderFor: initialData.orderFor || "",
         remarks: initialData.remarks || "",
         communicationMethod: initialData.communicationMethod || "",
@@ -204,7 +204,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           afm: "",
           customerName: "",
           phone: "",
-          customerType: "λιανική",
+          customerType: "χονδρική",
           orderFor: "", // Reset order for date
           products: {
             cookies: false,

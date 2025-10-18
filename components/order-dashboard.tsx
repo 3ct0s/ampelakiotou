@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OrderForm } from "./order-form"
 import { OrderDetailsModal } from "./order-details-modal"
+import { AnalyticsDashboard } from "./analytics-dashboard"
 import { Search, Plus, Filter, Printer } from "lucide-react"
 
 interface ProductItem { id: string; type: string; quantity: number }
@@ -316,12 +317,13 @@ export function OrderDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsList className="w-full mb-6 h-auto flex-col sm:flex-row gap-2 items-stretch justify-start">
           <TabsTrigger value="active">Ενεργές Παραγγελίες</TabsTrigger>
           <TabsTrigger value="completed">Παλαιές Παραγγελίες</TabsTrigger>
+          <TabsTrigger value="analytics">Αναλυτικά Στοιχεία</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-6">
+        <TabsContent value="active" className="space-y-6">
           {/* Controls */}
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -450,6 +452,140 @@ export function OrderDashboard() {
         </div>
       )}
 
+        </TabsContent>
+
+        <TabsContent value="completed" className="space-y-6">
+          {/* Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input placeholder="Αναζήτηση παραγγελιών..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="pl-10" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Όλες οι καταστάσεις</SelectItem>
+              <SelectItem value="pending">Εκκρεμής</SelectItem>
+              <SelectItem value="proforma_sent">Αποστ. Προτιμολογίου</SelectItem>
+              <SelectItem value="payment">Πληρωμή</SelectItem>
+              <SelectItem value="shipped">Αποστολή</SelectItem>
+              <SelectItem value="shipped_unpaid">Αποστολή χωρίς εξόφληση</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Dialog open={showNewOrderForm} onOpenChange={setShowNewOrderForm}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="h-4 w-4 mr-2" />
+              Νέα Παραγγελία
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Νέα Παραγγελία</DialogTitle></DialogHeader>
+            <OrderForm onSubmit={addNewOrder} />
+          </DialogContent>
+        </Dialog>
+        {editingOrder && (
+          <Dialog open={!!editingOrder} onOpenChange={(open) => { if (!open) setEditingOrder(null) }}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Επεξεργασία Παραγγελίας #{editingOrder.orderNumber ?? editingOrder.id}</DialogTitle></DialogHeader>
+              <OrderForm
+                mode="edit"
+                initialData={{
+                  id: editingOrder.id,
+                  afm: editingOrder.afm,
+                  customerName: editingOrder.customerName,
+                  phone: editingOrder.phone,
+                  customerType: editingOrder.customerType,
+                  orderFor: editingOrder.orderFor || undefined,
+                  remarks: editingOrder.remarks || undefined,
+                  communicationMethod: editingOrder.communicationMethod || undefined,
+                  communicationValue: editingOrder.communicationValue || undefined,
+                  discount: editingOrder.discount,
+                  products: editingOrder.products,
+                  productDetails: editingOrder.productDetails,
+                }}
+                onSubmit={handleUpdateOrder}
+                onCancel={() => setEditingOrder(null)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {/* State handling */}
+      {loading && <p className="text-sm text-muted-foreground py-8 text-center">Φόρτωση...</p>}
+      {error && !loading && <p className="text-sm text-red-600 py-4 text-center">Σφάλμα: {error}</p>}
+
+      {/* Orders List */}
+      {!loading && !error && (
+        <div className="grid gap-4">
+          {filteredOrders.length === 0 ? (
+            <Card><CardContent className="text-center py-12"><p className="text-muted-foreground">Δεν βρέθηκαν παραγγελίες</p></CardContent></Card>
+          ) : (
+            filteredOrders.map(order => (
+              <Card key={order.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1" onClick={() => setSelectedOrder(order)}>
+                      <div className="flex items-center gap-4 mb-2">
+                        <h3 className="font-semibold text-lg">#{order.orderNumber ?? order.id}</h3>
+                        <div className="flex gap-2">
+                          <Badge className={getStatusColor(order.status)}>{getStatusText(order.status)}</Badge>
+                          {order.completed && (
+                            <Badge className="bg-gray-100 text-gray-800 border-gray-200">Ολοκληρωμένη</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="font-medium">{order.customerName}</p>
+                          <p className="text-muted-foreground">ΑΦΜ: {order.afm}</p>
+                          <p className="text-muted-foreground">{order.phone}</p>
+                          <p className="text-xs text-muted-foreground">{order.customerType === 'λιανική' ? 'Λιανική' : 'Χονδρική'}</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Προϊόντα:</p>
+                          <p className="text-muted-foreground">{getProductsList(order.products, order.productDetails)}</p>
+                          {getTotalCookies(order.productDetails) > 0 && (
+                            <p className="text-primary font-medium">Σύνολο μπισκότα: {getTotalCookies(order.productDetails)}</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">Ημερομηνία:</p>
+                          <p className="text-muted-foreground">{order.createdAt.toLocaleDateString('el-GR')}</p>
+                          {order.orderFor && (
+                            <p className="text-primary font-medium">Παράδοση: {new Date(order.orderFor).toLocaleDateString('el-GR')}</p>
+                          )}
+                          {order.discount !== 'none' && (
+                            <p className="text-green-600 font-medium">Έκπτωση: {order.discount}%</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button variant="outline" size="sm" onClick={(e)=>{e.stopPropagation(); handlePrintOrder(order)}}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={(e)=>{e.stopPropagation(); setEditingOrder(order)}}>
+                        Επεξ.
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <AnalyticsDashboard orders={orders} />
         </TabsContent>
       </Tabs>
 
