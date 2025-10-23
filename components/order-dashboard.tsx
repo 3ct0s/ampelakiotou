@@ -27,8 +27,8 @@ export interface Order {
   remarks?: string
   communicationMethod?: string
   communicationValue?: string
-  products: { cookies: boolean; figures: boolean; sets: boolean; toppers: boolean; prints: boolean; other: boolean }
-  productDetails: { cookies: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
+  products: { cookies: boolean; big_cookies: boolean; cookies_box3: boolean; cookies_box4: boolean; figures: boolean; sets: boolean; toppers: boolean; prints: boolean; other: boolean }
+  productDetails: { cookies: ProductItem[]; big_cookies: ProductItem[]; cookies_box3: ProductItem[]; cookies_box4: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
   createdAt: Date
   completed: boolean
@@ -57,6 +57,9 @@ function mapRow(row: any): Order {
     orderFor: row.order_for || undefined,
     products: {
       cookies: !!row.has_cookies,
+      big_cookies: !!row.has_big_cookies,
+      cookies_box3: !!row.has_cookies_box3,
+      cookies_box4: !!row.has_cookies_box4,
       figures: !!row.has_figures,
       sets: !!row.has_sets,
       toppers: !!row.has_toppers,
@@ -65,6 +68,9 @@ function mapRow(row: any): Order {
     },
     productDetails: {
       cookies: normalize(pd.cookies || []),
+      big_cookies: normalize(pd.big_cookies || []),
+      cookies_box3: normalize(pd.cookies_box3 || []),
+      cookies_box4: normalize(pd.cookies_box4 || []),
       figures: normalize(pd.figures || []),
       sets: normalize(pd.sets || []),
       toppers: normalize(pd.toppers || []),
@@ -131,7 +137,7 @@ export function OrderDashboard() {
   })
 
   const getProductsList = (products: Order['products'], productDetails: Order['productDetails']) => {
-    const productNames: Record<string,string> = { cookies: 'Μπισκότα', figures: 'Φιγούρα', sets: 'Σετάκια', toppers: 'Τόπερς', prints: 'Εκτυπώσεις', other: 'Άλλο' }
+  const productNames: Record<string,string> = { cookies: 'Μπισκότα', big_cookies: 'Μεγάλα μπισκότα', cookies_box3: 'συσκευασία * 3', cookies_box4: 'συσκευασία * 4', figures: 'Φιγούρα', sets: 'Σετάκια', toppers: 'Τόπερς', prints: 'Εκτυπώσεις', other: 'Άλλο' }
     return Object.entries(products)
       .filter(([, selected]) => selected)
       .map(([key]) => {
@@ -141,7 +147,12 @@ export function OrderDashboard() {
       })
       .join(', ')
   }
-  const getTotalCookies = (pd: Order['productDetails']) => pd.cookies.reduce((t,i)=> t + (Number(i.quantity) || 0), 0)
+  const getTotalCookies = (pd: Order['productDetails']) => (
+    pd.cookies.reduce((t,i)=> t + (Number(i.quantity) || 0), 0) +
+    pd.big_cookies.reduce((t,i)=> t + (Number(i.quantity) || 0), 0) +
+    pd.cookies_box3.reduce((t,i)=> t + (Number(i.quantity) || 0), 0) +
+    pd.cookies_box4.reduce((t,i)=> t + (Number(i.quantity) || 0), 0)
+  )
 
   const getStatusColor = (status: Order['status']) => ({
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -165,7 +176,7 @@ export function OrderDashboard() {
         if (!selected) return ''
         const items = order.productDetails[key as keyof typeof order.productDetails]
         if (!items.length) return ''
-        const categoryName: Record<string,string> = { cookies:'Μπισκότα', figures:'Φιγούρα', sets:'Σετάκια', toppers:'Τόπερς', prints:'Εκτυπώσεις', other:'Άλλο' }
+  const categoryName: Record<string,string> = { cookies:'Μπισκότα', big_cookies:'Μεγάλα μπισκότα', cookies_box3:'συσκευασία * 3', cookies_box4:'συσκευασία * 4', figures:'Φιγούρα', sets:'Σετάκια', toppers:'Τόπερς', prints:'Εκτυπώσεις', other:'Άλλο' }
         return `<h3>${categoryName[key]}:</h3><ul>` + items.map(i=>`<li>${i.type} - ${i.quantity} τεμάχια</li>`).join('') + '</ul>'
       }).join('')
     }
@@ -223,7 +234,10 @@ export function OrderDashboard() {
   status: 'pending',
       completed: false,
       discount: orderData.discount || 'none',
-      has_cookies: products.cookies,
+  has_cookies: products.cookies,
+  has_big_cookies: products.big_cookies,
+  has_cookies_box3: products.cookies_box3,
+  has_cookies_box4: products.cookies_box4,
       has_figures: products.figures,
       has_sets: products.sets,
       has_toppers: products.toppers,
@@ -277,7 +291,10 @@ export function OrderDashboard() {
       customer_type: updated.customerType || 'λιανική',
       order_for: updated.orderFor || null,
       discount: updated.discount || 'none',
-      has_cookies: products.cookies,
+  has_cookies: products.cookies,
+  has_big_cookies: products.big_cookies,
+  has_cookies_box3: products.cookies_box3,
+  has_cookies_box4: products.cookies_box4,
       has_figures: products.figures,
       has_sets: products.sets,
       has_toppers: products.toppers,

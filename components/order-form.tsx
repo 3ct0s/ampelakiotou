@@ -30,6 +30,9 @@ interface OrderData {
   communicationValue?: string
   products: {
     cookies: boolean
+    big_cookies: boolean
+    cookies_box3: boolean
+    cookies_box4: boolean
     figures: boolean
     sets: boolean
     toppers: boolean
@@ -38,6 +41,9 @@ interface OrderData {
   }
   productDetails: {
     cookies: ProductItem[]
+    big_cookies: ProductItem[]
+    cookies_box3: ProductItem[]
+    cookies_box4: ProductItem[]
     figures: ProductItem[]
     sets: ProductItem[]
     toppers: ProductItem[]
@@ -78,6 +84,9 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
     orderFor: "", // Initialize order for date
     products: {
       cookies: false,
+      big_cookies: false,
+      cookies_box3: false,
+      cookies_box4: false,
       figures: false,
       sets: false,
       toppers: false,
@@ -86,6 +95,9 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
     },
     productDetails: {
       cookies: [],
+      big_cookies: [],
+      cookies_box3: [],
+      cookies_box4: [],
       figures: [],
       sets: [],
       toppers: [],
@@ -114,14 +126,20 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
         discount: initialData.discount || initialData.discount === 'none' ? (initialData.discount as string) : (prev.discount || 'none'),
         products: {
           cookies: initialData.products?.cookies ?? false,
-            figures: initialData.products?.figures ?? false,
-            sets: initialData.products?.sets ?? false,
-            toppers: initialData.products?.toppers ?? false,
-            prints: initialData.products?.prints ?? false,
-            other: initialData.products?.other ?? false,
+          big_cookies: (initialData.products as any)?.big_cookies ?? false,
+          cookies_box3: (initialData.products as any)?.cookies_box3 ?? false,
+          cookies_box4: (initialData.products as any)?.cookies_box4 ?? false,
+          figures: initialData.products?.figures ?? false,
+          sets: initialData.products?.sets ?? false,
+          toppers: initialData.products?.toppers ?? false,
+          prints: initialData.products?.prints ?? false,
+          other: initialData.products?.other ?? false,
         },
         productDetails: {
           cookies: (initialData.productDetails?.cookies || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
+          big_cookies: ((initialData.productDetails as any)?.big_cookies || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          cookies_box3: ((initialData.productDetails as any)?.cookies_box3 || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          cookies_box4: ((initialData.productDetails as any)?.cookies_box4 || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
           figures: (initialData.productDetails?.figures || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
           sets: (initialData.productDetails?.sets || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
           toppers: (initialData.productDetails?.toppers || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
@@ -161,6 +179,8 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
     }))
   }
 
+  
+
   const removeProductItem = (category: keyof OrderData["productDetails"], itemId: string) => {
     setOrderData((prev: OrderData) => ({
       ...prev,
@@ -189,10 +209,16 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
   }
 
   const getTotalCookies = () => {
-    return orderData.productDetails.cookies.reduce((total: number, item: ProductItem) => {
+    const sumCategory = (arr: ProductItem[]) => arr.reduce((total: number, item: ProductItem) => {
       const q = parseInt(item.quantity, 10)
       return total + (Number.isNaN(q) ? 0 : q)
     }, 0)
+    return (
+      sumCategory(orderData.productDetails.cookies) +
+      sumCategory((orderData.productDetails as any).big_cookies || []) +
+      sumCategory((orderData.productDetails as any).cookies_box3 || []) +
+      sumCategory((orderData.productDetails as any).cookies_box4 || [])
+    )
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -208,6 +234,9 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           orderFor: "", // Reset order for date
           products: {
             cookies: false,
+            big_cookies: false,
+            cookies_box3: false,
+            cookies_box4: false,
             figures: false,
             sets: false,
             toppers: false,
@@ -216,6 +245,9 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           },
           productDetails: {
             cookies: [],
+            big_cookies: [],
+            cookies_box3: [],
+            cookies_box4: [],
             figures: [],
             sets: [],
             toppers: [],
@@ -372,6 +404,9 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
             <div className="space-y-6">
               {[
                 { key: "cookies", label: "Μπισκότα" },
+                { key: "big_cookies", label: "Μεγάλα μπισκότα" },
+                { key: "cookies_box3", label: "συσκευασία * 3" },
+                { key: "cookies_box4", label: "συσκευασία * 4" },
                 { key: "figures", label: "Φιγούρα" },
                 { key: "sets", label: "Σετάκια" },
                 { key: "toppers", label: "Τόπερς" },
@@ -455,7 +490,7 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
               ))}
             </div>
 
-            {orderData.products.cookies && getTotalCookies() > 0 && (
+            {(orderData.products.cookies || orderData.products.big_cookies || orderData.products.cookies_box3 || orderData.products.cookies_box4) && getTotalCookies() > 0 && (
               <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                 <p className="text-lg font-semibold text-primary">Συνολικά Μπισκότα: {getTotalCookies()} τεμάχια</p>
               </div>

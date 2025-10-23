@@ -39,12 +39,15 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
   const getProductsList = (products: Order["products"], productDetails: Order["productDetails"]) => {
     const productNames = {
       cookies: "Μπισκότα",
+      big_cookies: "Μεγάλα μπισκότα",
+  cookies_box3: "συσκευασία * 3",
+  cookies_box4: "συσκευασία * 4",
       figures: "Φιγούρα",
       sets: "Σετάκια",
       toppers: "Τόπερς",
       prints: "Εκτυπώσεις",
       other: "Άλλο",
-    }
+    } as const
 
     return Object.entries(products)
       .filter(([_, selected]) => selected)
@@ -59,7 +62,8 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
   }
 
   const getTotalCookies = (productDetails: Order["productDetails"]) => {
-    return productDetails.cookies.reduce((total, item) => total + item.quantity, 0)
+    const sum = (arr: {quantity:number}[]) => arr.reduce((total, item) => total + (Number(item.quantity) || 0), 0)
+    return sum(productDetails.cookies) + sum(productDetails.big_cookies) + sum(productDetails.cookies_box3) + sum(productDetails.cookies_box4)
   }
 
   const getStatusColor = (status: Order["status"]) => {
@@ -106,7 +110,7 @@ export function OrderDetailsModal({ order, isOpen, onClose, onPrint, onStatusCha
       <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] p-0 gap-0" showCloseButton={false}>
         <div className="flex flex-col h-full">
           {/* Fixed header */}
-          <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b border-border bg-background">
+          <DialogHeader className="shrink-0 p-4 sm:p-6 border-b border-border bg-background">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl md:text-2xl">Λεπτομέρειες Παραγγελίας #{order.orderNumber ?? order.id}</DialogTitle>
               <div className="flex flex-col gap-2">

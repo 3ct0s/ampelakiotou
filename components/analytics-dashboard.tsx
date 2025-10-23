@@ -131,6 +131,9 @@ export function AnalyticsDashboard({ orders }: AnalyticsDashboardProps) {
     // Sum up all product quantities
     filteredOrders.forEach(order => {
       newStats.totalCookies += order.productDetails.cookies.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+      newStats.totalCookies += (order.productDetails as any).big_cookies?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalCookies += (order.productDetails as any).cookies_box3?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalCookies += (order.productDetails as any).cookies_box4?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
       newStats.totalFigures += order.productDetails.figures.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
       newStats.totalSets += order.productDetails.sets.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
       newStats.totalToppers += order.productDetails.toppers.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
