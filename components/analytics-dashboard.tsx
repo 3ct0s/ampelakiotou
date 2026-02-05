@@ -12,6 +12,10 @@ interface MonthlyStats {
   completedOrders: number
   activeOrders: number
   totalCookies: number
+  totalCakes: number
+  totalVasilopita: number
+  totalEggPrints: number
+  totalEggs: number
   totalFigures: number
   totalSets: number
   totalToppers: number
@@ -40,6 +44,10 @@ export function AnalyticsDashboard({ orders }: AnalyticsDashboardProps) {
     completedOrders: 0,
     activeOrders: 0,
     totalCookies: 0,
+    totalCakes: 0,
+    totalVasilopita: 0,
+    totalEggPrints: 0,
+    totalEggs: 0,
     totalFigures: 0,
     totalSets: 0,
     totalToppers: 0,
@@ -112,6 +120,10 @@ export function AnalyticsDashboard({ orders }: AnalyticsDashboardProps) {
       completedOrders: filteredOrders.filter(o => o.completed).length,
       activeOrders: filteredOrders.filter(o => !o.completed).length,
       totalCookies: 0,
+      totalCakes: 0,
+      totalVasilopita: 0,
+      totalEggPrints: 0,
+      totalEggs: 0,
       totalFigures: 0,
       totalSets: 0,
       totalToppers: 0,
@@ -134,6 +146,10 @@ export function AnalyticsDashboard({ orders }: AnalyticsDashboardProps) {
       newStats.totalCookies += (order.productDetails as any).big_cookies?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
       newStats.totalCookies += (order.productDetails as any).cookies_box3?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
       newStats.totalCookies += (order.productDetails as any).cookies_box4?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalCakes += (order.productDetails as any).cakes?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalVasilopita += (order.productDetails as any).vasilopita?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalEggPrints += (order.productDetails as any).egg_prints?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
+      newStats.totalEggs += (order.productDetails as any).eggs?.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0) || 0
       newStats.totalFigures += order.productDetails.figures.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
       newStats.totalSets += order.productDetails.sets.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
       newStats.totalToppers += order.productDetails.toppers.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
@@ -300,6 +316,30 @@ export function AnalyticsDashboard({ orders }: AnalyticsDashboardProps) {
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
               <div className="text-sm text-muted-foreground mb-1">Μπισκότα</div>
               <div className="text-3xl font-bold text-primary">{stats.totalCookies}</div>
+              <div className="text-xs text-muted-foreground mt-1">τεμάχια</div>
+            </div>
+
+            <div className="p-4 bg-rose-50 rounded-lg border border-rose-100">
+              <div className="text-sm text-muted-foreground mb-1">Τούρτες</div>
+              <div className="text-3xl font-bold text-rose-600">{stats.totalCakes}</div>
+              <div className="text-xs text-muted-foreground mt-1">τεμάχια</div>
+            </div>
+
+            <div className="p-4 bg-pink-50 rounded-lg border border-pink-100">
+              <div className="text-sm text-muted-foreground mb-1">Βασιλόπιτες</div>
+              <div className="text-3xl font-bold text-pink-600">{stats.totalVasilopita}</div>
+              <div className="text-xs text-muted-foreground mt-1">τεμάχια</div>
+            </div>
+
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+              <div className="text-sm text-muted-foreground mb-1">Αυγά Εκτύπωση</div>
+              <div className="text-3xl font-bold text-amber-700">{stats.totalEggPrints}</div>
+              <div className="text-xs text-muted-foreground mt-1">τεμάχια</div>
+            </div>
+
+            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+              <div className="text-sm text-muted-foreground mb-1">Αυγά</div>
+              <div className="text-3xl font-bold text-yellow-700">{stats.totalEggs}</div>
               <div className="text-xs text-muted-foreground mt-1">τεμάχια</div>
             </div>
 

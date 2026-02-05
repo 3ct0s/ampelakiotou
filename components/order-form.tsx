@@ -33,6 +33,10 @@ interface OrderData {
     big_cookies: boolean
     cookies_box3: boolean
     cookies_box4: boolean
+    cakes: boolean
+    vasilopita: boolean
+    egg_prints: boolean
+    eggs: boolean
     figures: boolean
     sets: boolean
     toppers: boolean
@@ -44,6 +48,10 @@ interface OrderData {
     big_cookies: ProductItem[]
     cookies_box3: ProductItem[]
     cookies_box4: ProductItem[]
+    cakes: ProductItem[]
+    vasilopita: ProductItem[]
+    egg_prints: ProductItem[]
+    eggs: ProductItem[]
     figures: ProductItem[]
     sets: ProductItem[]
     toppers: ProductItem[]
@@ -87,6 +95,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
       big_cookies: false,
       cookies_box3: false,
       cookies_box4: false,
+      cakes: false,
+      vasilopita: false,
+      egg_prints: false,
+      eggs: false,
       figures: false,
       sets: false,
       toppers: false,
@@ -98,6 +110,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
       big_cookies: [],
       cookies_box3: [],
       cookies_box4: [],
+      cakes: [],
+      vasilopita: [],
+      egg_prints: [],
+      eggs: [],
       figures: [],
       sets: [],
       toppers: [],
@@ -129,6 +145,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           big_cookies: (initialData.products as any)?.big_cookies ?? false,
           cookies_box3: (initialData.products as any)?.cookies_box3 ?? false,
           cookies_box4: (initialData.products as any)?.cookies_box4 ?? false,
+          cakes: (initialData.products as any)?.cakes ?? false,
+          vasilopita: (initialData.products as any)?.vasilopita ?? false,
+          egg_prints: (initialData.products as any)?.egg_prints ?? false,
+          eggs: (initialData.products as any)?.eggs ?? false,
           figures: initialData.products?.figures ?? false,
           sets: initialData.products?.sets ?? false,
           toppers: initialData.products?.toppers ?? false,
@@ -140,6 +160,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
           big_cookies: ((initialData.productDetails as any)?.big_cookies || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
           cookies_box3: ((initialData.productDetails as any)?.cookies_box3 || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
           cookies_box4: ((initialData.productDetails as any)?.cookies_box4 || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          cakes: ((initialData.productDetails as any)?.cakes || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          vasilopita: ((initialData.productDetails as any)?.vasilopita || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          egg_prints: ((initialData.productDetails as any)?.egg_prints || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
+          eggs: ((initialData.productDetails as any)?.eggs || []).map((i: any) => ({ ...i, quantity: String(i.quantity ?? '') })),
           figures: (initialData.productDetails?.figures || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
           sets: (initialData.productDetails?.sets || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
           toppers: (initialData.productDetails?.toppers || []).map(i => ({ ...i, quantity: String(i.quantity ?? '') })),
@@ -237,6 +261,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
             big_cookies: false,
             cookies_box3: false,
             cookies_box4: false,
+            cakes: false,
+            vasilopita: false,
+            egg_prints: false,
+            eggs: false,
             figures: false,
             sets: false,
             toppers: false,
@@ -248,6 +276,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
             big_cookies: [],
             cookies_box3: [],
             cookies_box4: [],
+            cakes: [],
+            vasilopita: [],
+            egg_prints: [],
+            eggs: [],
             figures: [],
             sets: [],
             toppers: [],
@@ -407,6 +439,10 @@ export function OrderForm({ onSubmit, mode = 'create', initialData, onCancel }: 
                 { key: "big_cookies", label: "Μεγάλα μπισκότα" },
                 { key: "cookies_box3", label: "συσκευασία * 3" },
                 { key: "cookies_box4", label: "συσκευασία * 4" },
+                { key: "cakes", label: "Τούρτα" },
+                { key: "vasilopita", label: "Βασιλόπιτα" },
+                { key: "egg_prints", label: "Αυγά Εκτύπωση" },
+                { key: "eggs", label: "Αυγά" },
                 { key: "figures", label: "Φιγούρα" },
                 { key: "sets", label: "Σετάκια" },
                 { key: "toppers", label: "Τόπερς" },

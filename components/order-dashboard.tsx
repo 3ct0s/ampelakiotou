@@ -27,8 +27,8 @@ export interface Order {
   remarks?: string
   communicationMethod?: string
   communicationValue?: string
-  products: { cookies: boolean; big_cookies: boolean; cookies_box3: boolean; cookies_box4: boolean; figures: boolean; sets: boolean; toppers: boolean; prints: boolean; other: boolean }
-  productDetails: { cookies: ProductItem[]; big_cookies: ProductItem[]; cookies_box3: ProductItem[]; cookies_box4: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
+  products: { cookies: boolean; big_cookies: boolean; cookies_box3: boolean; cookies_box4: boolean; cakes: boolean; vasilopita: boolean; egg_prints: boolean; eggs: boolean; figures: boolean; sets: boolean; toppers: boolean; prints: boolean; other: boolean }
+  productDetails: { cookies: ProductItem[]; big_cookies: ProductItem[]; cookies_box3: ProductItem[]; cookies_box4: ProductItem[]; cakes: ProductItem[]; vasilopita: ProductItem[]; egg_prints: ProductItem[]; eggs: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
   createdAt: Date
   completed: boolean
@@ -60,6 +60,10 @@ function mapRow(row: any): Order {
       big_cookies: !!row.has_big_cookies,
       cookies_box3: !!row.has_cookies_box3,
       cookies_box4: !!row.has_cookies_box4,
+      cakes: !!row.has_cakes,
+      vasilopita: !!row.has_vasilopita,
+      egg_prints: !!row.has_egg_prints,
+      eggs: !!row.has_eggs,
       figures: !!row.has_figures,
       sets: !!row.has_sets,
       toppers: !!row.has_toppers,
@@ -71,6 +75,10 @@ function mapRow(row: any): Order {
       big_cookies: normalize(pd.big_cookies || []),
       cookies_box3: normalize(pd.cookies_box3 || []),
       cookies_box4: normalize(pd.cookies_box4 || []),
+      cakes: normalize(pd.cakes || []),
+      vasilopita: normalize(pd.vasilopita || []),
+      egg_prints: normalize(pd.egg_prints || []),
+      eggs: normalize(pd.eggs || []),
       figures: normalize(pd.figures || []),
       sets: normalize(pd.sets || []),
       toppers: normalize(pd.toppers || []),
@@ -137,7 +145,7 @@ export function OrderDashboard() {
   })
 
   const getProductsList = (products: Order['products'], productDetails: Order['productDetails']) => {
-  const productNames: Record<string,string> = { cookies: 'Μπισκότα', big_cookies: 'Μεγάλα μπισκότα', cookies_box3: 'συσκευασία * 3', cookies_box4: 'συσκευασία * 4', figures: 'Φιγούρα', sets: 'Σετάκια', toppers: 'Τόπερς', prints: 'Εκτυπώσεις', other: 'Άλλο' }
+  const productNames: Record<string,string> = { cookies: 'Μπισκότα', big_cookies: 'Μεγάλα μπισκότα', cookies_box3: 'συσκευασία * 3', cookies_box4: 'συσκευασία * 4', cakes: 'Τούρτα', vasilopita: 'Βασιλόπιτα', egg_prints: 'Αυγά Εκτύπωση', eggs: 'Αυγά', figures: 'Φιγούρα', sets: 'Σετάκια', toppers: 'Τόπερς', prints: 'Εκτυπώσεις', other: 'Άλλο' }
     return Object.entries(products)
       .filter(([, selected]) => selected)
       .map(([key]) => {
@@ -176,7 +184,7 @@ export function OrderDashboard() {
         if (!selected) return ''
         const items = order.productDetails[key as keyof typeof order.productDetails]
         if (!items.length) return ''
-  const categoryName: Record<string,string> = { cookies:'Μπισκότα', big_cookies:'Μεγάλα μπισκότα', cookies_box3:'συσκευασία * 3', cookies_box4:'συσκευασία * 4', figures:'Φιγούρα', sets:'Σετάκια', toppers:'Τόπερς', prints:'Εκτυπώσεις', other:'Άλλο' }
+  const categoryName: Record<string,string> = { cookies:'Μπισκότα', big_cookies:'Μεγάλα μπισκότα', cookies_box3:'συσκευασία * 3', cookies_box4:'συσκευασία * 4', cakes:'Τούρτα', vasilopita:'Βασιλόπιτα', egg_prints:'Αυγά Εκτύπωση', eggs:'Αυγά', figures:'Φιγούρα', sets:'Σετάκια', toppers:'Τόπερς', prints:'Εκτυπώσεις', other:'Άλλο' }
         return `<h3>${categoryName[key]}:</h3><ul>` + items.map(i=>`<li>${i.type} - ${i.quantity} τεμάχια</li>`).join('') + '</ul>'
       }).join('')
     }
@@ -238,6 +246,10 @@ export function OrderDashboard() {
   has_big_cookies: products.big_cookies,
   has_cookies_box3: products.cookies_box3,
   has_cookies_box4: products.cookies_box4,
+  has_cakes: products.cakes,
+  has_vasilopita: products.vasilopita,
+  has_egg_prints: products.egg_prints,
+  has_eggs: products.eggs,
       has_figures: products.figures,
       has_sets: products.sets,
       has_toppers: products.toppers,
@@ -295,6 +307,10 @@ export function OrderDashboard() {
   has_big_cookies: products.big_cookies,
   has_cookies_box3: products.cookies_box3,
   has_cookies_box4: products.cookies_box4,
+  has_cakes: products.cakes,
+  has_vasilopita: products.vasilopita,
+  has_egg_prints: products.egg_prints,
+  has_eggs: products.eggs,
       has_figures: products.figures,
       has_sets: products.sets,
       has_toppers: products.toppers,
