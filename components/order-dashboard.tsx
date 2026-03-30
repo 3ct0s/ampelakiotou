@@ -31,11 +31,19 @@ export interface Order {
   productDetails: { cookies: ProductItem[]; big_cookies: ProductItem[]; cookies_box3: ProductItem[]; cookies_box4: ProductItem[]; cakes: ProductItem[]; vasilopita: ProductItem[]; egg_prints: ProductItem[]; eggs: ProductItem[]; figures: ProductItem[]; sets: ProductItem[]; toppers: ProductItem[]; prints: ProductItem[]; other: ProductItem[] }
   discount: string
   createdAt: Date
+  lastModifiedAt: Date
   completed: boolean
   // New status flow
   // pending -> proforma_sent -> payment -> shipped (or shipped_unpaid)
   status: "pending" | "proforma_sent" | "payment" | "shipped" | "shipped_unpaid"
 }
+
+const sortByLastModifiedDesc = (list: Order[]) =>
+  [...list].sort((a, b) => {
+    const aTime = (a.lastModifiedAt ?? a.createdAt).getTime()
+    const bTime = (b.lastModifiedAt ?? b.createdAt).getTime()
+    return bTime - aTime
+  })
 
 // Map DB row -> Order interface
 function mapRow(row: any): Order {
@@ -87,6 +95,7 @@ function mapRow(row: any): Order {
     },
     discount: row.discount || 'none',
     createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+    lastModifiedAt: row.last_modified_at ? new Date(row.last_modified_at) : (row.created_at ? new Date(row.created_at) : new Date()),
     remarks: row.remarks || undefined,
     communicationMethod: row.communication_method || undefined,
     communicationValue: row.communication_value || undefined,
@@ -121,13 +130,14 @@ export function OrderDashboard() {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
+      .order('last_modified_at', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) {
       setError(error.message)
       setLoading(false)
       return
     }
-    setOrders((data || []).map(mapRow))
+    setOrders(sortByLastModifiedDesc((data || []).map(mapRow)))
     setLoading(false)
   }, [])
 
@@ -262,22 +272,34 @@ export function OrderDashboard() {
     }
     const { data, error } = await supabase.from('orders').insert(insertPayload).select('*').single()
     if (error) { alert('Σφάλμα καταχώρησης: ' + error.message); return }
-    setOrders(prev => [mapRow(data), ...prev])
+    setOrders(prev => sortByLastModifiedDesc([mapRow(data), ...prev]))
     setShowNewOrderForm(false)
   }
 
   const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
-    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId)
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId)
+      .select('*')
+      .single()
     if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
-    if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, status: newStatus } : s)
+    const mapped = mapRow(data)
+    setOrders(prev => sortByLastModifiedDesc(prev.map(o => o.id === orderId ? mapped : o)))
+    if (selectedOrder?.id === orderId) setSelectedOrder(mapped)
   }
 
   const handleCompleteOrder = async (orderId: string, completed: boolean) => {
-    const { error } = await supabase.from('orders').update({ completed }).eq('id', orderId)
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ completed })
+      .eq('id', orderId)
+      .select('*')
+      .single()
     if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, completed } : o))
-    if (selectedOrder?.id === orderId) setSelectedOrder(s => s ? { ...s, completed } : s)
+    const mapped = mapRow(data)
+    setOrders(prev => sortByLastModifiedDesc(prev.map(o => o.id === orderId ? mapped : o)))
+    if (selectedOrder?.id === orderId) setSelectedOrder(mapped)
   }
 
   // Update existing order (called from OrderForm in edit mode)
@@ -324,7 +346,7 @@ export function OrderDashboard() {
     const { data, error } = await supabase.from('orders').update(updatePayload).eq('id', orderId).select('*').single()
     if (error) { alert('Σφάλμα ενημέρωσης: ' + error.message); return }
     const mapped = mapRow(data)
-    setOrders(prev => prev.map(o => o.id === orderId ? mapped : o))
+    setOrders(prev => sortByLastModifiedDesc(prev.map(o => o.id === orderId ? mapped : o)))
     setEditingOrder(null)
     // If the order details modal is currently open for this order, update it too
     setSelectedOrder(prev => prev && prev.id === orderId ? mapped : prev)
